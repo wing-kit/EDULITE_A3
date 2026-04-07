@@ -154,7 +154,9 @@ class ArmWorker(QThread):
             if self.arm and not self._sim_mode:
                 self.arm.SetSmoothingAlpha(args[0])
 
-    def _do_connect(self, can_name="can0", sim_mode=False):
+    def _do_connect(self, can_name="can0", sim_mode=False,
+                    backend="socketcan", serial_port=None,
+                    serial_baudrate=2000000, can_bitrate=1000000):
         if self._connected:
             return
         self._sim_mode = sim_mode
@@ -167,13 +169,14 @@ class ArmWorker(QThread):
             self.error_occurred.emit("el_a3_sdk 未安装")
             return
 
-        from debugger.utils.can_utils import get_can_state
-        state = get_can_state(can_name)
-        if state != "UP":
-            self.error_occurred.emit(
-                f"CAN 接口 {can_name} 未开启（当前状态: {state}），请先在工具栏中开启"
-            )
-            return
+        if backend != "slcan":
+            from debugger.utils.can_utils import get_can_state
+            state = get_can_state(can_name)
+            if state != "UP":
+                self.error_occurred.emit(
+                    f"CAN 接口 {can_name} 未开启（当前状态: {state}），请先在工具栏中开启"
+                )
+                return
 
         try:
             sdk_root = Path(__file__).parent.parent.parent
@@ -183,11 +186,17 @@ class ArmWorker(QThread):
                 kwargs["inertia_config_path"] = str(inertia_path)
             kwargs["per_joint_kd_min"] = {4: 0.005, 5: 0.005, 6: 0.005, 7: 0.02}
             kwargs["per_joint_kd_max"] = {4: 0.10, 5: 0.05, 6: 0.05, 7: 0.10}
+            if backend == "slcan":
+                kwargs["backend"] = "slcan"
+                kwargs["serial_port"] = serial_port or can_name
+                kwargs["serial_baudrate"] = serial_baudrate
+                kwargs["can_bitrate"] = can_bitrate
             self.arm = ELA3Interface(**kwargs)
             self.arm.ConnectPort()
             self._connected = True
             self.connected_changed.emit(True)
-            self.log_message.emit(f"已连接到 {can_name}")
+            display_name = f"{serial_port or can_name} (SLCAN)" if backend == "slcan" else can_name
+            self.log_message.emit(f"已连接到 {display_name}")
         except Exception as e:
             self.error_occurred.emit(f"连接失败: {e}")
 

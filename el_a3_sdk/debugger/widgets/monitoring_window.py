@@ -3,6 +3,7 @@
 from PyQt6.QtWidgets import QMainWindow
 from PyQt6.QtCore import Qt
 
+from debugger.utils.i18n import tr
 from debugger.widgets.monitoring_panel import MonitoringPanel
 from debugger.backend.data_buffer import DataBuffer
 
@@ -12,7 +13,7 @@ class MonitoringWindow(QMainWindow):
 
     def __init__(self, data_buffer: DataBuffer, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("实时数据监控")
+        self.setWindowTitle(tr("mon.window_title"))
         self.setMinimumSize(900, 600)
         self.resize(1100, 700)
         self.setWindowFlags(
@@ -23,6 +24,11 @@ class MonitoringWindow(QMainWindow):
 
         self.panel = MonitoringPanel(data_buffer)
         self.setCentralWidget(self.panel)
+
+    def retranslate_ui(self):
+        self.setWindowTitle(tr("mon.window_title"))
+        self.panel.retranslate_ui()
+        self.panel.apply_theme()
 
     def closeEvent(self, event):
         self.hide()

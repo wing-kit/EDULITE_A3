@@ -8,7 +8,9 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import pyqtSignal, Qt
 
-from debugger.utils.style import JOINT_COLORS
+from debugger.utils.style import JOINT_COLORS, SCENE_COLORS
+from debugger.utils.theme_manager import ThemeManager
+from debugger.utils.i18n import tr
 
 JOINT_LIMITS_DEG = {
     1: (-160.0, 160.0),
@@ -21,11 +23,6 @@ JOINT_LIMITS_DEG = {
 }
 
 JOINT_NAMES = ["L1", "L2", "L3", "L4", "L5", "L6", "L7"]
-JOINT_TOOLTIPS = [
-    "L1 - RS00 肩部旋转", "L2 - RS00 肩部俯仰", "L3 - RS00 肘部",
-    "L4 - EL05 腕部旋转", "L5 - EL05 腕部俯仰", "L6 - EL05 腕部翻转",
-    "L7 - EL05 夹爪",
-]
 
 SLIDER_RESOLUTION = 1000
 
@@ -43,6 +40,8 @@ class JointControlPanel(QWidget):
         self._sliders = []
         self._spinboxes = []
         self._feedback_labels = []
+        self._header_labels = []
+        self._name_labels = []
         self._init_ui()
 
     def _init_ui(self):
@@ -54,13 +53,15 @@ class JointControlPanel(QWidget):
         grid.setSpacing(2)
         grid.setContentsMargins(0, 0, 0, 0)
 
-        headers = ["关节", "控制", "目标 (°)", "实际 (°)"]
+        headers = [tr("jc.header_joint"), tr("jc.header_ctrl"), tr("jc.header_target"), tr("jc.header_actual")]
         for col, h in enumerate(headers):
             lbl = QLabel(h)
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            lbl.setStyleSheet("font-weight: bold; color: #a6adc8;")
+            sc = SCENE_COLORS[ThemeManager.instance().theme]
+            lbl.setStyleSheet(f"font-weight: bold; color: {sc['header_text']};")
             lbl.setFixedHeight(20)
             grid.addWidget(lbl, 0, col)
+            self._header_labels.append(lbl)
 
         for i in range(7):
             row = i + 1
@@ -71,8 +72,9 @@ class JointControlPanel(QWidget):
             name_label.setStyleSheet(f"color: {JOINT_COLORS[i]}; font-weight: bold;")
             name_label.setFixedWidth(28)
             name_label.setFixedHeight(22)
-            name_label.setToolTip(JOINT_TOOLTIPS[i])
+            name_label.setToolTip(tr(f"jc.tooltip_L{i+1}"))
             grid.addWidget(name_label, row, 0)
+            self._name_labels.append(name_label)
 
             slider = QSlider(Qt.Orientation.Horizontal)
             slider.setRange(0, SLIDER_RESOLUTION)
@@ -88,8 +90,8 @@ class JointControlPanel(QWidget):
             spinbox.setDecimals(1)
             spinbox.setSingleStep(1.0)
             spinbox.setSuffix("°")
-            spinbox.setFixedWidth(78)
-            spinbox.setFixedHeight(22)
+            spinbox.setFixedWidth(85)
+            spinbox.setFixedHeight(24)
             spinbox.setValue(0.0 if lo <= 0.0 <= hi else lo)
             spinbox.valueChanged.connect(lambda v, idx=i: self._on_spinbox_changed(idx, v))
             self._spinboxes.append(spinbox)
@@ -97,8 +99,8 @@ class JointControlPanel(QWidget):
 
             fb_label = QLabel("0.00°")
             fb_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            fb_label.setFixedWidth(60)
-            fb_label.setFixedHeight(22)
+            fb_label.setFixedWidth(65)
+            fb_label.setFixedHeight(24)
             fb_label.setStyleSheet(f"color: {JOINT_COLORS[i]};")
             self._feedback_labels.append(fb_label)
             grid.addWidget(fb_label, row, 3)
@@ -111,18 +113,18 @@ class JointControlPanel(QWidget):
 
         btn_layout = QHBoxLayout()
         btn_layout.setContentsMargins(0, 2, 0, 0)
-        self.zero_btn = QPushButton("归零")
+        self.zero_btn = QPushButton(tr("jc.go_zero"))
         self.zero_btn.setFixedHeight(26)
         self.zero_btn.clicked.connect(self._on_go_zero)
         btn_layout.addWidget(self.zero_btn)
 
-        self.sync_btn = QPushButton("同步当前位置")
+        self.sync_btn = QPushButton(tr("jc.sync_pos"))
         self.sync_btn.setFixedHeight(26)
         self.sync_btn.clicked.connect(self._sync_to_feedback)
         btn_layout.addWidget(self.sync_btn)
 
         btn_layout.addStretch()
-        self.send_btn = QPushButton("发送")
+        self.send_btn = QPushButton(tr("jc.send"))
         self.send_btn.setObjectName("enableBtn")
         self.send_btn.setFixedHeight(26)
         self.send_btn.clicked.connect(self._emit_command)
@@ -130,6 +132,19 @@ class JointControlPanel(QWidget):
 
         layout.addLayout(btn_layout)
         layout.addStretch()
+
+    def retranslate_ui(self):
+        sc = SCENE_COLORS[ThemeManager.instance().theme]
+        headers = [tr("jc.header_joint"), tr("jc.header_ctrl"), tr("jc.header_target"), tr("jc.header_actual")]
+        for i, lbl in enumerate(self._header_labels):
+            lbl.setText(headers[i])
+            lbl.setStyleSheet(f"font-weight: bold; color: {sc['header_text']};")
+        self.zero_btn.setText(tr("jc.go_zero"))
+        self.sync_btn.setText(tr("jc.sync_pos"))
+        self.send_btn.setText(tr("jc.send"))
+        tooltips = [tr(f"jc.tooltip_L{i+1}") for i in range(7)]
+        for i, lbl in enumerate(self._name_labels):
+            lbl.setToolTip(tooltips[i])
 
     def _slider_to_deg(self, joint_idx, slider_val):
         lo, hi = JOINT_LIMITS_DEG[joint_idx + 1]

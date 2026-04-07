@@ -1,21 +1,21 @@
 """实时监控面板：4 通道 pyqtgraph 实时曲线"""
 
-import numpy as np
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
     QGridLayout, QFileDialog, QLabel,
 )
-from PyQt6.QtCore import QTimer, Qt
+from PyQt6.QtCore import QTimer
 
 import pyqtgraph as pg
 
-from debugger.utils.style import JOINT_COLORS
+from debugger.utils.i18n import tr
+from debugger.utils.theme_manager import ThemeManager
+from debugger.utils.style import SCENE_COLORS, JOINT_COLORS
 from debugger.backend.data_buffer import DataBuffer
 
-pg.setConfigOptions(antialias=True, background="#1e1e2e", foreground="#cdd6f4")
+pg.setConfigOptions(antialias=True)
 
 CHANNEL_NAMES = ["L1", "L2", "L3", "L4", "L5", "L6", "L7"]
-PLOT_TITLES = ["关节位置 (rad)", "关节速度 (rad/s)", "关节力矩 (Nm)", "关节温度 (°C)"]
 
 
 class MonitoringPanel(QWidget):
@@ -28,35 +28,58 @@ class MonitoringPanel(QWidget):
         self._plots = []
         self._curves = []
         self._init_ui()
+        self.apply_theme()
+        self.retranslate_ui()
         self._start_timer()
+
+    def apply_theme(self):
+        sc = SCENE_COLORS[ThemeManager.instance().theme]
+        for pw in self._plots:
+            pw.setBackground(sc["pg_bg"])
+
+    def retranslate_ui(self):
+        titles = [
+            tr("mon.title_pos"),
+            tr("mon.title_vel"),
+            tr("mon.title_torque"),
+            tr("mon.title_temp"),
+        ]
+        for pw, title in zip(self._plots, titles):
+            pw.setTitle(title)
+            pw.setLabel("bottom", tr("mon.time"), units="s")
+        self.pause_btn.setText(tr("mon.resume") if self._paused else tr("mon.pause"))
+        self.clear_btn.setText(tr("mon.clear"))
+        self.export_btn.setText(tr("mon.export"))
 
     def _init_ui(self):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(2, 2, 2, 2)
 
         top_bar = QHBoxLayout()
-        self.pause_btn = QPushButton("暂停")
+        self.pause_btn = QPushButton()
         self.pause_btn.setFixedWidth(60)
         self.pause_btn.clicked.connect(self._toggle_pause)
         top_bar.addWidget(self.pause_btn)
 
-        self.clear_btn = QPushButton("清空")
+        self.clear_btn = QPushButton()
         self.clear_btn.setFixedWidth(60)
         self.clear_btn.clicked.connect(self._clear_data)
         top_bar.addWidget(self.clear_btn)
 
-        self.export_btn = QPushButton("导出 CSV")
+        self.export_btn = QPushButton()
         self.export_btn.setFixedWidth(80)
         self.export_btn.clicked.connect(self._export_csv)
         top_bar.addWidget(self.export_btn)
 
         top_bar.addSpacing(20)
+        self._channel_swatches: list[QLabel] = []
         for ch in range(7):
-            swatch = QLabel(f"■ {CHANNEL_NAMES[ch]}")
+            swatch = QLabel()
             swatch.setStyleSheet(
                 f"color: {JOINT_COLORS[ch]}; font-weight: bold; font-size: 11px;"
             )
             top_bar.addWidget(swatch)
+            self._channel_swatches.append(swatch)
 
         top_bar.addStretch()
         layout.addLayout(top_bar)
@@ -64,9 +87,8 @@ class MonitoringPanel(QWidget):
         grid = QGridLayout()
         grid.setSpacing(4)
 
-        for idx, title in enumerate(PLOT_TITLES):
-            pw = pg.PlotWidget(title=title)
-            pw.setLabel("bottom", "时间", units="s")
+        for idx in range(4):
+            pw = pg.PlotWidget()
             pw.showGrid(x=True, y=True, alpha=0.3)
 
             curves = []
@@ -80,6 +102,9 @@ class MonitoringPanel(QWidget):
             grid.addWidget(pw, idx // 2, idx % 2)
 
         layout.addLayout(grid)
+
+        for ch, lbl in enumerate(self._channel_swatches):
+            lbl.setText(f"■ {CHANNEL_NAMES[ch]}")
 
     def _start_timer(self):
         self._timer = QTimer(self)
@@ -103,7 +128,7 @@ class MonitoringPanel(QWidget):
 
     def _toggle_pause(self):
         self._paused = not self._paused
-        self.pause_btn.setText("继续" if self._paused else "暂停")
+        self.pause_btn.setText(tr("mon.resume") if self._paused else tr("mon.pause"))
 
     def _clear_data(self):
         self.data_buffer.clear()
@@ -113,7 +138,7 @@ class MonitoringPanel(QWidget):
 
     def _export_csv(self):
         filepath, _ = QFileDialog.getSaveFileName(
-            self, "导出数据", "arm_data.csv", "CSV Files (*.csv)"
+            self, tr("mon.export_title"), "arm_data.csv", "CSV Files (*.csv)"
         )
         if filepath:
             self.data_buffer.export_csv(filepath)

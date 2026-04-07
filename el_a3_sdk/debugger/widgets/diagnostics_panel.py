@@ -4,28 +4,32 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QGroupBox, QGridLayout,
     QTableWidget, QTableWidgetItem, QHeaderView,
-    QSpinBox, QComboBox, QDoubleSpinBox, QTextEdit,
+    QSpinBox, QComboBox, QDoubleSpinBox,
 )
-from PyQt6.QtCore import pyqtSignal, Qt, QTimer
+from PyQt6.QtCore import pyqtSignal, Qt
 
-PARAM_NAMES = {
-    0x7005: "运行模式 (RUN_MODE)",
-    0x7006: "电流给定 (IQ_REF)",
-    0x700A: "速度给定 (SPD_REF)",
-    0x700B: "力矩限制 (LIMIT_TORQUE)",
-    0x7010: "电流Kp (CUR_KP)",
-    0x7011: "电流Ki (CUR_KI)",
-    0x7016: "位置给定 (LOC_REF)",
-    0x7017: "速度限制 (LIMIT_SPD)",
-    0x7018: "电流限制 (LIMIT_CUR)",
-    0x7019: "机械位置 (MECH_POS)",
-    0x701A: "滤波电流 (IQF)",
-    0x701B: "机械速度 (MECH_VEL)",
-    0x701C: "母线电压 (VBUS)",
-    0x701E: "位置Kp (LOC_KP)",
-    0x701F: "速度Kp (SPD_KP)",
-    0x7020: "速度Ki (SPD_KI)",
-}
+from debugger.utils.i18n import tr
+from debugger.utils.theme_manager import ThemeManager
+from debugger.utils.style import SCENE_COLORS
+
+PARAM_ORDER = [
+    (0x7005, "diag.p_7005"),
+    (0x7006, "diag.p_7006"),
+    (0x700A, "diag.p_700a"),
+    (0x700B, "diag.p_700b"),
+    (0x7010, "diag.p_7010"),
+    (0x7011, "diag.p_7011"),
+    (0x7016, "diag.p_7016"),
+    (0x7017, "diag.p_7017"),
+    (0x7018, "diag.p_7018"),
+    (0x7019, "diag.p_7019"),
+    (0x701A, "diag.p_701a"),
+    (0x701B, "diag.p_701b"),
+    (0x701C, "diag.p_701c"),
+    (0x701E, "diag.p_701e"),
+    (0x701F, "diag.p_701f"),
+    (0x7020, "diag.p_7020"),
+]
 
 
 class DiagnosticsPanel(QWidget):
@@ -39,20 +43,22 @@ class DiagnosticsPanel(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self._last_scan_results = None
+        self._last_verify_results = None
+        self._last_scan_online_count = 0
         self._init_ui()
+
+    def _scene(self):
+        return SCENE_COLORS[ThemeManager.instance().theme]
 
     def _init_ui(self):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(4, 4, 4, 4)
 
-        motor_group = QGroupBox("电机状态")
+        self.motor_group = QGroupBox()
         motor_layout = QVBoxLayout()
 
         self.motor_table = QTableWidget(7, 8)
-        self.motor_table.setHorizontalHeaderLabels([
-            "电机ID", "位置(rad)", "速度(rad/s)", "力矩(Nm)",
-            "温度(°C)", "故障码", "模式", "使能"
-        ])
         self.motor_table.horizontalHeader().setSectionResizeMode(
             QHeaderView.ResizeMode.Stretch
         )
@@ -67,26 +73,24 @@ class DiagnosticsPanel(QWidget):
         self.motor_table.verticalHeader().setDefaultSectionSize(24)
         self.motor_table.verticalHeader().setVisible(False)
         motor_layout.addWidget(self.motor_table)
-        motor_group.setLayout(motor_layout)
-        layout.addWidget(motor_group)
+        self.motor_group.setLayout(motor_layout)
+        layout.addWidget(self.motor_group)
 
-        scan_group = QGroupBox("电机扫描")
+        self.scan_group = QGroupBox()
         scan_vlayout = QVBoxLayout()
         scan_vlayout.setSpacing(4)
 
         scan_row = QHBoxLayout()
-        self.scan_btn = QPushButton("扫描电机")
-        self.scan_btn.setToolTip("依次探测电机 1-7，读取固件版本与母线电压")
+        self.scan_btn = QPushButton()
         self.scan_btn.clicked.connect(self.scan_motors_requested.emit)
         scan_row.addWidget(self.scan_btn)
-        self.scan_status = QLabel("未扫描")
+        self.scan_status = QLabel()
         self.scan_status.setStyleSheet("font-weight: bold;")
         scan_row.addWidget(self.scan_status)
         scan_row.addStretch()
         scan_vlayout.addLayout(scan_row)
 
         self.scan_table = QTableWidget(7, 4)
-        self.scan_table.setHorizontalHeaderLabels(["电机ID", "状态", "固件版本", "母线电压(V)"])
         self.scan_table.horizontalHeader().setSectionResizeMode(
             QHeaderView.ResizeMode.Stretch
         )
@@ -100,113 +104,175 @@ class DiagnosticsPanel(QWidget):
         self.scan_table.verticalHeader().setVisible(False)
         scan_vlayout.addWidget(self.scan_table)
 
-        scan_group.setLayout(scan_vlayout)
-        layout.addWidget(scan_group)
+        self.scan_group.setLayout(scan_vlayout)
+        layout.addWidget(self.scan_group)
 
-        param_group = QGroupBox("参数读写")
+        self.param_group = QGroupBox()
         param_vlayout = QVBoxLayout()
         param_vlayout.setSpacing(4)
 
         row1 = QHBoxLayout()
-        row1.addWidget(QLabel("电机ID:"))
+        self._lbl_motor_id = QLabel()
+        row1.addWidget(self._lbl_motor_id)
         self.motor_id_spin = QSpinBox()
         self.motor_id_spin.setRange(1, 7)
         self.motor_id_spin.setFixedWidth(50)
         row1.addWidget(self.motor_id_spin)
         row1.addSpacing(8)
-        row1.addWidget(QLabel("参数:"))
+        self._lbl_param = QLabel()
+        row1.addWidget(self._lbl_param)
         self.param_combo = QComboBox()
-        for idx, name in PARAM_NAMES.items():
-            self.param_combo.addItem(f"0x{idx:04X} - {name}", idx)
         row1.addWidget(self.param_combo, 1)
         param_vlayout.addLayout(row1)
 
         row2 = QHBoxLayout()
-        self.read_btn = QPushButton("读取")
+        self.read_btn = QPushButton()
         self.read_btn.setFixedWidth(60)
         self.read_btn.clicked.connect(self._on_read)
         row2.addWidget(self.read_btn)
         row2.addSpacing(8)
-        row2.addWidget(QLabel("值:"))
+        self._lbl_value = QLabel()
+        row2.addWidget(self._lbl_value)
         self.value_spin = QDoubleSpinBox()
         self.value_spin.setRange(-10000, 10000)
         self.value_spin.setDecimals(4)
         self.value_spin.setFixedWidth(120)
         row2.addWidget(self.value_spin)
         row2.addSpacing(8)
-        self.write_btn = QPushButton("写入")
+        self.write_btn = QPushButton()
         self.write_btn.setFixedWidth(60)
         self.write_btn.clicked.connect(self._on_write)
         row2.addWidget(self.write_btn)
         row2.addStretch()
         param_vlayout.addLayout(row2)
 
-        param_group.setLayout(param_vlayout)
-        layout.addWidget(param_group)
+        self.param_group.setLayout(param_vlayout)
+        layout.addWidget(self.param_group)
 
-        verify_group = QGroupBox("参数校验")
+        self.verify_group = QGroupBox()
         verify_layout = QVBoxLayout()
         verify_layout.setSpacing(4)
 
         verify_row = QHBoxLayout()
-        self.verify_btn = QPushButton("校验 ZERO_STA")
-        self.verify_btn.setToolTip("依次读取全部电机 ZERO_STA(0x7029) 参数，验证是否为 1")
+        self.verify_btn = QPushButton()
         self.verify_btn.clicked.connect(self.verify_zero_sta_requested.emit)
         verify_row.addWidget(self.verify_btn)
-        self.verify_status = QLabel("未校验")
+        self.verify_status = QLabel()
         self.verify_status.setStyleSheet("font-weight: bold;")
         verify_row.addWidget(self.verify_status)
         verify_row.addStretch()
         verify_layout.addLayout(verify_row)
 
+        self._verify_motor_labels: list[QLabel] = []
         self._verify_labels: list[QLabel] = []
         verify_grid = QGridLayout()
         verify_grid.setSpacing(2)
         for i in range(7):
-            mid_lbl = QLabel(f"电机{i+1}:")
+            mid_lbl = QLabel()
             mid_lbl.setFixedWidth(50)
             val_lbl = QLabel("—")
             val_lbl.setStyleSheet("font-family: monospace;")
             verify_grid.addWidget(mid_lbl, i // 4, (i % 4) * 2)
             verify_grid.addWidget(val_lbl, i // 4, (i % 4) * 2 + 1)
+            self._verify_motor_labels.append(mid_lbl)
             self._verify_labels.append(val_lbl)
         verify_layout.addLayout(verify_grid)
 
-        verify_group.setLayout(verify_layout)
-        layout.addWidget(verify_group)
+        self.verify_group.setLayout(verify_layout)
+        layout.addWidget(self.verify_group)
 
-        op_group = QGroupBox("操作")
+        self.op_group = QGroupBox()
         op_layout = QHBoxLayout()
 
         zero_layout = QHBoxLayout()
-        zero_layout.addWidget(QLabel("设零电机:"))
+        self._lbl_zero_motor = QLabel()
+        zero_layout.addWidget(self._lbl_zero_motor)
         self.zero_motor_spin = QSpinBox()
         self.zero_motor_spin.setRange(1, 7)
         zero_layout.addWidget(self.zero_motor_spin)
-        zero_btn = QPushButton("设置零位")
-        zero_btn.clicked.connect(
+        self.zero_btn = QPushButton()
+        self.zero_btn.clicked.connect(
             lambda: self.set_zero_requested.emit(self.zero_motor_spin.value())
         )
-        zero_layout.addWidget(zero_btn)
+        zero_layout.addWidget(self.zero_btn)
 
-        zero_all_btn = QPushButton("全部设零")
-        zero_all_btn.clicked.connect(lambda: self.set_zero_requested.emit(0xFF))
-        zero_layout.addWidget(zero_all_btn)
+        self.zero_all_btn = QPushButton()
+        self.zero_all_btn.clicked.connect(lambda: self.set_zero_requested.emit(0xFF))
+        zero_layout.addWidget(self.zero_all_btn)
 
         op_layout.addLayout(zero_layout)
-        op_group.setLayout(op_layout)
-        layout.addWidget(op_group)
+        self.op_group.setLayout(op_layout)
+        layout.addWidget(self.op_group)
 
-        can_group = QGroupBox("CAN 总线状态")
+        self.can_group = QGroupBox()
         can_layout = QHBoxLayout()
         self.can_fps_label = QLabel("FPS: --")
         can_layout.addWidget(self.can_fps_label)
         self.can_tx_label = QLabel("TX: --")
         can_layout.addWidget(self.can_tx_label)
-        self.can_state_label = QLabel("状态: --")
+        self.can_state_label = QLabel()
         can_layout.addWidget(self.can_state_label)
-        can_group.setLayout(can_layout)
-        layout.addWidget(can_group)
+        self.can_group.setLayout(can_layout)
+        layout.addWidget(self.can_group)
+
+        self.retranslate_ui()
+
+    def _rebuild_param_combo(self):
+        cur = self.param_combo.currentData()
+        self.param_combo.clear()
+        for idx, key in PARAM_ORDER:
+            self.param_combo.addItem(f"0x{idx:04X} - {tr(key)}", idx)
+        if cur is not None:
+            for i in range(self.param_combo.count()):
+                if self.param_combo.itemData(i) == cur:
+                    self.param_combo.setCurrentIndex(i)
+                    break
+
+    def retranslate_ui(self):
+        self.motor_group.setTitle(tr("diag.motor_group"))
+        self.motor_table.setHorizontalHeaderLabels([
+            tr("diag.h_id"), tr("diag.h_pos"), tr("diag.h_vel"), tr("diag.h_torque"),
+            tr("diag.h_temp"), tr("diag.h_fault"), tr("diag.h_mode"), tr("diag.h_enable"),
+        ])
+        self.scan_group.setTitle(tr("diag.scan_group"))
+        self.scan_btn.setText(tr("diag.scan_btn"))
+        self.scan_btn.setToolTip(tr("diag.scan_tip"))
+        self.scan_table.setHorizontalHeaderLabels([
+            tr("diag.sh_id"), tr("diag.sh_status"), tr("diag.sh_fw"), tr("diag.sh_vbus"),
+        ])
+        self.param_group.setTitle(tr("diag.param_group"))
+        self._lbl_motor_id.setText(tr("diag.motor_id"))
+        self._lbl_param.setText(tr("diag.param"))
+        self.read_btn.setText(tr("diag.read"))
+        self._lbl_value.setText(tr("diag.value"))
+        self.write_btn.setText(tr("diag.write"))
+        self.verify_group.setTitle(tr("diag.verify_group"))
+        self.verify_btn.setText(tr("diag.verify_btn"))
+        self.verify_btn.setToolTip(tr("diag.verify_tip"))
+        for i, lbl in enumerate(self._verify_motor_labels):
+            lbl.setText(tr("diag.motor_n", n=i + 1))
+        self.op_group.setTitle(tr("diag.op_group"))
+        self._lbl_zero_motor.setText(tr("diag.zero_motor"))
+        self.zero_btn.setText(tr("diag.set_zero"))
+        self.zero_all_btn.setText(tr("diag.set_zero_all"))
+        self.can_group.setTitle(tr("diag.can_group"))
+        self.can_state_label.setText(tr("diag.state"))
+        self._rebuild_param_combo()
+
+        if self._last_scan_results is not None:
+            self.update_scan_result(self._last_scan_results)
+        else:
+            self.scan_status.setText(tr("diag.not_scanned"))
+            self.scan_status.setStyleSheet("font-weight: bold;")
+
+        if self._last_verify_results is not None:
+            self.update_zero_sta_result(self._last_verify_results)
+        else:
+            self.verify_status.setText(tr("diag.not_verified"))
+            self.verify_status.setStyleSheet("font-weight: bold;")
+            for lbl in self._verify_labels:
+                lbl.setText("—")
+                lbl.setStyleSheet("font-family: monospace;")
 
     def _on_read(self):
         motor_id = self.motor_id_spin.value()
@@ -244,10 +310,13 @@ class DiagnosticsPanel(QWidget):
                     if hasattr(fb, 'mode_state'):
                         self.motor_table.item(row, 6).setText(str(fb.mode_state))
                     if hasattr(fb, 'is_valid'):
-                        self.motor_table.item(row, 7).setText("是" if fb.is_valid else "否")
+                        self.motor_table.item(row, 7).setText(
+                            tr("diag.yes") if fb.is_valid else tr("diag.no"))
 
     def update_scan_result(self, results: list):
         """更新电机扫描结果: [(motor_id, online, firmware_str, voltage), ...]"""
+        self._last_scan_results = list(results)
+        sc = self._scene()
         online_count = 0
         for motor_id, online, fw_str, voltage in results:
             row = motor_id - 1
@@ -255,55 +324,63 @@ class DiagnosticsPanel(QWidget):
                 continue
             if online:
                 online_count += 1
-                self.scan_table.item(row, 1).setText("在线")
+                self.scan_table.item(row, 1).setText(tr("diag.online"))
                 self.scan_table.item(row, 1).setForeground(
                     self.scan_table.item(row, 1).foreground())
                 item_status = self.scan_table.item(row, 1)
-                item_status.setText("在线")
+                item_status.setText(tr("diag.online"))
                 self.scan_table.item(row, 2).setText(fw_str if fw_str else "—")
                 self.scan_table.item(row, 3).setText(
                     f"{voltage:.1f}" if voltage is not None else "—")
             else:
                 item_status = self.scan_table.item(row, 1)
-                item_status.setText("离线")
+                item_status.setText(tr("diag.offline"))
                 self.scan_table.item(row, 2).setText("—")
                 self.scan_table.item(row, 3).setText("—")
 
-        self.scan_status.setText(f"{online_count}/7 在线")
+        self._last_scan_online_count = online_count
+        self.scan_status.setText(tr("diag.scan_result", n=online_count))
         if online_count == 7:
-            self.scan_status.setStyleSheet("font-weight: bold; color: #a6e3a1;")
+            self.scan_status.setStyleSheet(
+                f"font-weight: bold; color: {sc['success']};")
         elif online_count > 0:
-            self.scan_status.setStyleSheet("font-weight: bold; color: #f9e2af;")
+            self.scan_status.setStyleSheet(
+                f"font-weight: bold; color: {sc['warning']};")
         else:
-            self.scan_status.setStyleSheet("font-weight: bold; color: #f38ba8;")
+            self.scan_status.setStyleSheet(
+                f"font-weight: bold; color: {sc['error']};")
 
     def update_zero_sta_result(self, results: list):
         """更新 ZERO_STA 校验结果: [(motor_id, value, success), ...]"""
+        self._last_verify_results = list(results)
+        sc = self._scene()
         all_ok = True
         for motor_id, value, success in results:
             idx = motor_id - 1
             if 0 <= idx < len(self._verify_labels):
                 if not success:
-                    self._verify_labels[idx].setText("读取失败")
+                    self._verify_labels[idx].setText(tr("diag.read_fail"))
                     self._verify_labels[idx].setStyleSheet(
-                        "font-family: monospace; color: #f38ba8; font-weight: bold;")
+                        f"font-family: monospace; color: {sc['error']}; font-weight: bold;")
                     all_ok = False
                 elif value == 1:
                     self._verify_labels[idx].setText(f"{value} ✓")
                     self._verify_labels[idx].setStyleSheet(
-                        "font-family: monospace; color: #a6e3a1; font-weight: bold;")
+                        f"font-family: monospace; color: {sc['success']}; font-weight: bold;")
                 else:
                     self._verify_labels[idx].setText(f"{value} ✗")
                     self._verify_labels[idx].setStyleSheet(
-                        "font-family: monospace; color: #f38ba8; font-weight: bold;")
+                        f"font-family: monospace; color: {sc['error']}; font-weight: bold;")
                     all_ok = False
 
         if all_ok:
-            self.verify_status.setText("全部通过")
-            self.verify_status.setStyleSheet("font-weight: bold; color: #a6e3a1;")
+            self.verify_status.setText(tr("diag.all_pass"))
+            self.verify_status.setStyleSheet(
+                f"font-weight: bold; color: {sc['success']};")
         else:
-            self.verify_status.setText("存在异常")
-            self.verify_status.setStyleSheet("font-weight: bold; color: #f38ba8;")
+            self.verify_status.setText(tr("diag.has_error"))
+            self.verify_status.setStyleSheet(
+                f"font-weight: bold; color: {sc['error']};")
 
     def update_can_stats(self, fps: float):
         self.can_fps_label.setText(f"FPS: {fps:.0f}")

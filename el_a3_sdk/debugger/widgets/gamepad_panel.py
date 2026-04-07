@@ -1,7 +1,6 @@
 """手柄控制面板：设备连接 + 输入数据监控 + 手柄控臂"""
 
 import glob
-import math
 import threading
 import logging
 from typing import Optional
@@ -13,20 +12,16 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import pyqtSignal, QTimer, Qt
 
+from debugger.utils.i18n import tr
+from debugger.utils.theme_manager import ThemeManager
+from debugger.utils.style import SCENE_COLORS
+
 from el_a3_sdk.joystick import LinuxJoystick
 from el_a3_sdk.controller_profiles import (
-    PROFILES, ControllerProfile, detect_controller, ControllerDetection,
+    PROFILES, detect_controller, ControllerDetection,
 )
 
 logger = logging.getLogger("debugger.gamepad")
-
-SPEED_LEVELS = [
-    ("极慢", 0.10),
-    ("慢",   0.25),
-    ("中",   0.50),
-    ("快",   0.75),
-    ("最大", 1.00),
-]
 
 
 class _AxisBar(QProgressBar):
@@ -38,9 +33,14 @@ class _AxisBar(QProgressBar):
         self.setValue(1000)
         self.setTextVisible(False)
         self.setFixedHeight(16)
+        self.apply_theme()
+
+    def apply_theme(self):
+        sc = SCENE_COLORS[ThemeManager.instance().theme]
         self.setStyleSheet(
-            "QProgressBar { background: #313244; border: 1px solid #45475a; border-radius: 3px; }"
-            "QProgressBar::chunk { background: #89b4fa; border-radius: 2px; }"
+            f"QProgressBar {{ background: {sc['progress_bg']}; border: 1px solid {sc['progress_border']};"
+            f"  border-radius: 4px; }}"
+            f"QProgressBar::chunk {{ background: {sc['progress_chunk']}; border-radius: 3px; }}"
         )
 
     def set_value(self, v: float):
@@ -51,24 +51,32 @@ class _AxisBar(QProgressBar):
 class _ButtonIndicator(QLabel):
     """单个按钮指示灯"""
 
-    _STYLE_OFF = (
-        "background: #313244; border: 1px solid #45475a; border-radius: 3px;"
-        "min-width: 28px; min-height: 20px; color: #6c7086; font-size: 11px;"
-        "qproperty-alignment: AlignCenter;"
-    )
-    _STYLE_ON = (
-        "background: #a6e3a1; border: 1px solid #a6e3a1; border-radius: 3px;"
-        "min-width: 28px; min-height: 20px; color: #1e1e2e; font-size: 11px; font-weight: bold;"
-        "qproperty-alignment: AlignCenter;"
-    )
-
     def __init__(self, index: int, parent=None):
         super().__init__(str(index), parent)
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.setStyleSheet(self._STYLE_OFF)
+        self._pressed = False
+        self.apply_theme()
+
+    def apply_theme(self):
+        sc = SCENE_COLORS[ThemeManager.instance().theme]
+        if self._pressed:
+            self.setStyleSheet(
+                f"background: {sc['indicator_on_bg']}; border: 1px solid {sc['indicator_on_border']};"
+                f"border-radius: 4px; min-width: 28px; min-height: 20px;"
+                f"color: {sc['indicator_on_fg']}; font-size: 11px; font-weight: bold;"
+                "qproperty-alignment: AlignCenter;"
+            )
+        else:
+            self.setStyleSheet(
+                f"background: {sc['indicator_off_bg']}; border: 1px solid {sc['indicator_off_border']};"
+                f"border-radius: 4px; min-width: 28px; min-height: 20px;"
+                f"color: {sc['indicator_off_fg']}; font-size: 11px;"
+                "qproperty-alignment: AlignCenter;"
+            )
 
     def set_pressed(self, pressed: bool):
-        self.setStyleSheet(self._STYLE_ON if pressed else self._STYLE_OFF)
+        self._pressed = pressed
+        self.apply_theme()
 
 
 class GamepadPanel(QWidget):
@@ -94,6 +102,34 @@ class GamepadPanel(QWidget):
         self._poll_timer.setInterval(50)  # 20 Hz
         self._poll_timer.timeout.connect(self._poll_input)
 
+    def _scene(self):
+        return SCENE_COLORS[ThemeManager.instance().theme]
+
+    @staticmethod
+    def _speed_level_specs():
+        return [
+            (tr("gp.speed_very_slow"), 0.10),
+            (tr("gp.speed_slow"), 0.25),
+            (tr("gp.speed_medium"), 0.50),
+            (tr("gp.speed_fast"), 0.75),
+            (tr("gp.speed_max"), 1.00),
+        ]
+
+    def _apply_monitor_header_styles(self):
+        sc = self._scene()
+        self._axes_title.setStyleSheet(
+            f"font-weight: bold; color: {sc['accent']}; margin-top: 2px;")
+        self._buttons_title.setStyleSheet(
+            f"font-weight: bold; color: {sc['accent']}; margin-top: 4px;")
+        self._mapped_title.setStyleSheet(
+            f"font-weight: bold; color: {sc['accent']}; margin-top: 4px;")
+        self._mapped_display.setStyleSheet(
+            f"font-family: monospace; font-size: 11px; color: {sc['mapped_fg']}; "
+            f"background: {sc['mapped_bg']}; padding: 4px; border-radius: 3px;"
+        )
+        self._info_label.setStyleSheet(
+            f"color: {sc['subtext']}; font-size: 11px;")
+
     # ---- UI Construction ----
 
     def _init_ui(self):
@@ -105,9 +141,12 @@ class GamepadPanel(QWidget):
         layout.setContentsMargins(4, 4, 4, 4)
         layout.setSpacing(6)
 
-        layout.addWidget(self._build_connection_group())
-        layout.addWidget(self._build_monitor_group())
-        layout.addWidget(self._build_control_group())
+        self._conn_group = self._build_connection_group()
+        layout.addWidget(self._conn_group)
+        self._monitor_group = self._build_monitor_group()
+        layout.addWidget(self._monitor_group)
+        self._ctrl_group = self._build_control_group()
+        layout.addWidget(self._ctrl_group)
         layout.addStretch()
 
         scroll.setWidget(inner)
@@ -115,19 +154,22 @@ class GamepadPanel(QWidget):
         outer.setContentsMargins(0, 0, 0, 0)
         outer.addWidget(scroll)
 
+        self.retranslate_ui()
+
     def _build_connection_group(self) -> QGroupBox:
-        grp = QGroupBox("连接设置")
+        grp = QGroupBox()
         layout = QVBoxLayout()
         layout.setSpacing(4)
 
         row1 = QHBoxLayout()
-        row1.addWidget(QLabel("设备:"))
+        self._lbl_device = QLabel()
+        row1.addWidget(self._lbl_device)
         self._dev_combo = QComboBox()
         self._dev_combo.setEditable(True)
         self._dev_combo.setMinimumWidth(140)
         row1.addWidget(self._dev_combo, 1)
 
-        self._refresh_btn = QPushButton("刷新")
+        self._refresh_btn = QPushButton()
         self._refresh_btn.setFixedWidth(50)
         self._refresh_btn.clicked.connect(self._scan_devices)
         row1.addWidget(self._refresh_btn)
@@ -143,16 +185,15 @@ class GamepadPanel(QWidget):
         layout.addLayout(row2)
 
         row3 = QHBoxLayout()
-        self._connect_btn = QPushButton("连接手柄")
+        self._connect_btn = QPushButton()
         self._connect_btn.setObjectName("connectBtn")
         self._connect_btn.clicked.connect(self._toggle_connection)
         row3.addWidget(self._connect_btn)
         row3.addStretch()
         layout.addLayout(row3)
 
-        self._info_label = QLabel("未连接")
+        self._info_label = QLabel()
         self._info_label.setWordWrap(True)
-        self._info_label.setStyleSheet("color: #a6adc8; font-size: 11px;")
         layout.addWidget(self._info_label)
 
         grp.setLayout(layout)
@@ -160,13 +201,12 @@ class GamepadPanel(QWidget):
         return grp
 
     def _build_monitor_group(self) -> QGroupBox:
-        grp = QGroupBox("输入数据监控")
+        grp = QGroupBox()
         layout = QVBoxLayout()
         layout.setSpacing(4)
 
-        axes_label = QLabel("轴 (Axes)")
-        axes_label.setStyleSheet("font-weight: bold; color: #89b4fa; margin-top: 2px;")
-        layout.addWidget(axes_label)
+        self._axes_title = QLabel()
+        layout.addWidget(self._axes_title)
 
         self._axis_bars: list[_AxisBar] = []
         self._axis_labels: list[QLabel] = []
@@ -187,9 +227,8 @@ class GamepadPanel(QWidget):
             self._axis_labels.append(val_lbl)
         layout.addLayout(axes_grid)
 
-        btn_label = QLabel("按钮 (Buttons)")
-        btn_label.setStyleSheet("font-weight: bold; color: #89b4fa; margin-top: 4px;")
-        layout.addWidget(btn_label)
+        self._buttons_title = QLabel()
+        layout.addWidget(self._buttons_title)
 
         self._btn_indicators: list[_ButtonIndicator] = []
         btn_grid = QGridLayout()
@@ -200,28 +239,23 @@ class GamepadPanel(QWidget):
             self._btn_indicators.append(ind)
         layout.addLayout(btn_grid)
 
-        mapped_label = QLabel("逻辑映射")
-        mapped_label.setStyleSheet("font-weight: bold; color: #89b4fa; margin-top: 4px;")
-        layout.addWidget(mapped_label)
+        self._mapped_title = QLabel()
+        layout.addWidget(self._mapped_title)
 
         self._mapped_display = QLabel("—")
         self._mapped_display.setWordWrap(True)
-        self._mapped_display.setStyleSheet(
-            "font-family: monospace; font-size: 11px; color: #cdd6f4; "
-            "background: #181825; padding: 4px; border-radius: 3px;"
-        )
         layout.addWidget(self._mapped_display)
 
         grp.setLayout(layout)
         return grp
 
     def _build_control_group(self) -> QGroupBox:
-        grp = QGroupBox("手柄控臂")
+        grp = QGroupBox()
         layout = QVBoxLayout()
         layout.setSpacing(4)
 
         row1 = QHBoxLayout()
-        self._ctrl_btn = QPushButton("启动控制")
+        self._ctrl_btn = QPushButton()
         self._ctrl_btn.setObjectName("enableBtn")
         self._ctrl_btn.setEnabled(False)
         self._ctrl_btn.clicked.connect(self._toggle_control)
@@ -232,16 +266,19 @@ class GamepadPanel(QWidget):
         info_grid = QGridLayout()
         info_grid.setSpacing(2)
 
-        info_grid.addWidget(QLabel("速度档位:"), 0, 0)
-        self._speed_label = QLabel("3/5 [中]")
+        self._lbl_speed_level = QLabel()
+        info_grid.addWidget(self._lbl_speed_level, 0, 0)
+        self._speed_label = QLabel()
         self._speed_label.setStyleSheet("font-weight: bold;")
         info_grid.addWidget(self._speed_label, 0, 1)
 
-        info_grid.addWidget(QLabel("控制模式:"), 1, 0)
+        self._lbl_ctrl_mode = QLabel()
+        info_grid.addWidget(self._lbl_ctrl_mode, 1, 0)
         self._mode_label = QLabel("—")
         info_grid.addWidget(self._mode_label, 1, 1)
 
-        info_grid.addWidget(QLabel("末端位姿:"), 2, 0)
+        self._lbl_end_pose = QLabel()
+        info_grid.addWidget(self._lbl_end_pose, 2, 0)
         self._pose_label = QLabel("—")
         self._pose_label.setStyleSheet("font-family: monospace; font-size: 11px;")
         self._pose_label.setWordWrap(True)
@@ -250,6 +287,49 @@ class GamepadPanel(QWidget):
         layout.addLayout(info_grid)
         grp.setLayout(layout)
         return grp
+
+    def retranslate_ui(self):
+        self._conn_group.setTitle(tr("gp.conn_group"))
+        self._lbl_device.setText(tr("gp.device"))
+        self._refresh_btn.setText(tr("gp.refresh"))
+        if self._joystick and self._joystick.connected:
+            self._connect_btn.setText(tr("gp.disconnect"))
+        else:
+            self._connect_btn.setText(tr("gp.connect"))
+        if self._joystick and self._joystick.connected and self._detection:
+            det = self._detection
+            self._info_label.setText(
+                tr(
+                    "gp.connected_info",
+                    name=det.name or "unknown",
+                    vendor=det.vendor,
+                    product=det.product,
+                    pname=det.profile.display_name,
+                    source=det.source,
+                )
+            )
+        else:
+            self._info_label.setText(tr("gp.not_connected"))
+
+        self._monitor_group.setTitle(tr("gp.monitor_group"))
+        self._axes_title.setText(tr("gp.axes"))
+        self._buttons_title.setText(tr("gp.buttons"))
+        self._mapped_title.setText(tr("gp.mapped"))
+
+        self._ctrl_group.setTitle(tr("gp.ctrl_group"))
+        self._update_ctrl_btn_state()
+        self._lbl_speed_level.setText(tr("gp.speed_level"))
+        self._lbl_ctrl_mode.setText(tr("gp.ctrl_mode"))
+        self._lbl_end_pose.setText(tr("gp.end_pose"))
+
+        specs = self._speed_level_specs()
+        self._speed_label.setText(
+            f"{self._speed_idx + 1}/5 [{specs[self._speed_idx][0]}]")
+        self._apply_monitor_header_styles()
+        for bar in self._axis_bars:
+            bar.apply_theme()
+        for ind in self._btn_indicators:
+            ind.apply_theme()
 
     # ---- Device Scanning ----
 
@@ -280,31 +360,42 @@ class GamepadPanel(QWidget):
         try:
             self._detection = detect_controller(device, requested_profile=profile_id)
         except Exception as e:
-            self._info_label.setText(f"Profile 检测失败: {e}")
-            self.gamepad_log.emit(f"手柄 profile 检测失败: {e}")
+            es = str(e)
+            self._info_label.setText(tr("gp.profile_fail", e=es))
+            self.gamepad_log.emit(tr("gp.profile_fail_log", e=es))
             return
 
         joy = LinuxJoystick(device=device)
         if not joy.connect():
-            self._info_label.setText(f"无法打开 {device}")
-            self.gamepad_log.emit(f"手柄连接失败: {device}")
+            self._info_label.setText(tr("gp.cannot_open", device=device))
+            self.gamepad_log.emit(tr("gp.connect_fail_log", device=device))
             return
 
         self._joystick = joy
         det = self._detection
         self._info_label.setText(
-            f"设备: {det.name or 'unknown'}  |  "
-            f"VID:PID {det.vendor}:{det.product}  |  "
-            f"Profile: {det.profile.display_name} ({det.source})"
+            tr(
+                "gp.connected_info",
+                name=det.name or "unknown",
+                vendor=det.vendor,
+                product=det.product,
+                pname=det.profile.display_name,
+                source=det.source,
+            )
         )
-        self._connect_btn.setText("断开手柄")
+        self._connect_btn.setText(tr("gp.disconnect"))
         self._connect_btn.setObjectName("disconnectBtn")
         self._connect_btn.setStyle(self._connect_btn.style())
         self._poll_timer.start()
         self._update_ctrl_btn_state()
 
         self.gamepad_log.emit(
-            f"手柄已连接: {device} → {det.profile.display_name} ({det.source})"
+            tr(
+                "gp.connected_log",
+                device=device,
+                profile=det.profile.display_name,
+                source=det.source,
+            )
         )
 
     def _disconnect_gamepad(self):
@@ -317,10 +408,10 @@ class GamepadPanel(QWidget):
             self._joystick = None
         self._detection = None
 
-        self._connect_btn.setText("连接手柄")
+        self._connect_btn.setText(tr("gp.connect"))
         self._connect_btn.setObjectName("connectBtn")
         self._connect_btn.setStyle(self._connect_btn.style())
-        self._info_label.setText("未连接")
+        self._info_label.setText(tr("gp.not_connected"))
         self._update_ctrl_btn_state()
 
         for bar in self._axis_bars:
@@ -331,7 +422,7 @@ class GamepadPanel(QWidget):
             ind.set_pressed(False)
         self._mapped_display.setText("—")
 
-        self.gamepad_log.emit("手柄已断开")
+        self.gamepad_log.emit(tr("gp.gamepad_disconnected"))
 
     # ---- Input Polling (20 Hz) ----
 
@@ -366,18 +457,23 @@ class GamepadPanel(QWidget):
         if self._ctrl_running and self._controller:
             ctrl = self._controller
             idx = ctrl._speed_idx
-            name, _ = SPEED_LEVELS[idx]
+            specs = self._speed_level_specs()
+            name, _ = specs[idx]
             self._speed_label.setText(f"{idx+1}/5 [{name}]")
 
+            sc = self._scene()
             if ctrl._zero_torque:
-                self._mode_label.setText("零力矩")
-                self._mode_label.setStyleSheet("color: #e67e22; font-weight: bold;")
+                self._mode_label.setText(tr("gp.mode_zt"))
+                self._mode_label.setStyleSheet(
+                    f"color: {sc['mode_zt']}; font-weight: bold;")
             elif ctrl._estop:
-                self._mode_label.setText("急停")
-                self._mode_label.setStyleSheet("color: #e74c3c; font-weight: bold;")
+                self._mode_label.setText(tr("gp.mode_estop"))
+                self._mode_label.setStyleSheet(
+                    f"color: {sc['mode_estop']}; font-weight: bold;")
             else:
-                self._mode_label.setText("正常")
-                self._mode_label.setStyleSheet("color: #a6e3a1; font-weight: bold;")
+                self._mode_label.setText(tr("gp.mode_normal"))
+                self._mode_label.setStyleSheet(
+                    f"color: {sc['mode_normal']}; font-weight: bold;")
 
             if ctrl._target_pose:
                 p = ctrl._target_pose
@@ -388,7 +484,7 @@ class GamepadPanel(QWidget):
 
             if ctrl.exit_requested:
                 self._stop_control()
-                self.gamepad_log.emit("手柄控制：收到退出请求")
+                self.gamepad_log.emit(tr("gp.ctrl_exit"))
 
     # ---- Arm Control ----
 
@@ -405,10 +501,10 @@ class GamepadPanel(QWidget):
         )
         self._ctrl_btn.setEnabled(can_start or self._ctrl_running)
         if self._ctrl_running:
-            self._ctrl_btn.setText("停止控制")
+            self._ctrl_btn.setText(tr("gp.stop_ctrl"))
             self._ctrl_btn.setObjectName("disconnectBtn")
         else:
-            self._ctrl_btn.setText("启动控制")
+            self._ctrl_btn.setText(tr("gp.start_ctrl"))
             self._ctrl_btn.setObjectName("enableBtn")
         self._ctrl_btn.setStyle(self._ctrl_btn.style())
 
@@ -420,10 +516,10 @@ class GamepadPanel(QWidget):
 
     def _start_control(self):
         if not self._joystick or not self._joystick.connected:
-            self.gamepad_log.emit("请先连接手柄")
+            self.gamepad_log.emit(tr("gp.connect_first"))
             return
         if not self._arm:
-            self.gamepad_log.emit("请先连接机械臂")
+            self.gamepad_log.emit(tr("gp.connect_arm_first"))
             return
         if not self._detection:
             return
@@ -443,14 +539,15 @@ class GamepadPanel(QWidget):
         )
         self._ctrl_thread.start()
         self._update_ctrl_btn_state()
-        self.gamepad_log.emit("手柄控臂已启动")
+        self.gamepad_log.emit(tr("gp.ctrl_started"))
 
     def _run_control(self):
         try:
             self._controller.start()
         except Exception as e:
-            logger.error("手柄控制异常: %s", e)
-            self.gamepad_log.emit(f"手柄控制异常: {e}")
+            err_s = str(e)
+            logger.error(tr("gp.ctrl_error", e=err_s))
+            self.gamepad_log.emit(tr("gp.ctrl_error", e=err_s))
         finally:
             self._ctrl_running = False
 
@@ -467,9 +564,11 @@ class GamepadPanel(QWidget):
         self._mode_label.setText("—")
         self._mode_label.setStyleSheet("")
         self._pose_label.setText("—")
-        self._speed_label.setText(f"{self._speed_idx+1}/5 [{SPEED_LEVELS[self._speed_idx][0]}]")
+        specs = self._speed_level_specs()
+        self._speed_label.setText(
+            f"{self._speed_idx+1}/5 [{specs[self._speed_idx][0]}]")
 
-        self.gamepad_log.emit("手柄控臂已停止")
+        self.gamepad_log.emit(tr("gp.ctrl_stopped"))
 
     # ---- Cleanup ----
 
