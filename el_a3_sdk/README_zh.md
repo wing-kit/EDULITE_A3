@@ -9,6 +9,7 @@
 - [架构](#架构)
 - [硬件要求](#硬件要求)
 - [安装](#安装)
+  - [Debugger 上位机](#3-安装-debugger-上位机可选)
 - [快速开始](#快速开始)
 - [控制循环](#控制循环)
 - [API 参考](#api-参考)
@@ -112,6 +113,33 @@ pip install -e ".[dynamics]"  # 含 Pinocchio 动力学支持
 ```
 
 依赖：`numpy`、`pyyaml`。可选：`pinocchio` (`pip install pin`) 用于 FK/IK/重力补偿。
+
+### 3. 安装 Debugger 上位机（可选）
+
+Debugger 提供 PyQt6 GUI 界面，内含基于 **PyVista** (VTK) 的 3D URDF 可视化、关节拖拽控制、实时监控等功能。
+
+```bash
+# Ubuntu 系统依赖（OpenGL / Mesa，3D 渲染必需）
+sudo apt install -y libgl1-mesa-glx libgl1-mesa-dev libxrender1 libxcb-xinerama0
+
+# 安装 Debugger 全部 Python 依赖
+pip install -e ".[debugger]"
+```
+
+这会安装以下包（及其依赖）：
+
+| 包 | 用途 |
+|---|---|
+| `pyqt6` | GUI 框架 |
+| `pyqtgraph` | 实时数据曲线绘制 |
+| `pyvista` | 3D 网格渲染 / URDF 可视化（底层依赖 VTK） |
+| `pyvistaqt` | 将 PyVista 渲染器嵌入 PyQt6 窗口 |
+
+安装完成后即可启动：
+
+```bash
+el-a3-debugger
+```
 
 ---
 

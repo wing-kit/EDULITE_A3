@@ -23,12 +23,19 @@ pip install -e .
 # 如需运动学/动力学功能
 pip install -e ".[dynamics]"
 
+# 如需 Debugger 上位机（PyQt6 GUI + PyVista 3D 可视化）
+sudo apt install -y libgl1-mesa-glx libgl1-mesa-dev libxrender1 libxcb-xinerama0  # Ubuntu 系统依赖
+pip install -e ".[debugger]"
+
 # 配置 CAN 接口
 sudo bash scripts/setup_can.sh can0 1000000
 
 # 运行示例
 python3 demo/control_loop_demo.py
 python3 demo/zero_torque_mode.py --gravity
+
+# 启动 Debugger 上位机
+el-a3-debugger
 ```
 
 ---
@@ -50,6 +57,7 @@ python3 demo/zero_torque_mode.py --gravity
 
 - **必需**: `numpy`, `pyyaml`
 - **可选**: `pin` (Pinocchio) - 运动学/动力学
+- **Debugger 上位机**: `pyqt6`, `pyqtgraph`, `pyvista`, `pyvistaqt` — GUI + 3D URDF 可视化
 
 ---
 

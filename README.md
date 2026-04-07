@@ -50,7 +50,24 @@
 | **CAN 总线** | SocketCAN · CAN 2.0 扩展帧 · 1 Mbps |
 | **核心 Python 依赖** | `numpy`、`pyyaml` |
 | **可选 Python 依赖** | `pinocchio`（`pip install pin`）— FK/IK/重力补偿 |
+| **Debugger 上位机** | `pyqt6`、`pyqtgraph`、`pyvista`、`pyvistaqt`（`pip install -e ".[debugger]"`） |
 | **ROS2 依赖** | `ros2_control`、`MoveIt2`、`pick_ik`、`joy` 等（通过 `scripts/install_deps.sh` 安装） |
+
+### Debugger 上位机安装
+
+Debugger 提供 PyQt6 GUI 界面，内含基于 PyVista (VTK) 的 3D URDF 可视化、关节拖拽控制、实时监控等功能。
+
+```bash
+# Ubuntu 系统依赖（OpenGL / Mesa）
+sudo apt install -y libgl1-mesa-glx libgl1-mesa-dev libxrender1 libxcb-xinerama0
+
+# 安装 Debugger 全部依赖
+cd el_a3_sdk
+pip install -e ".[debugger]"
+
+# 启动上位机
+el-a3-debugger
+```
 
 ### CAN 接口配置
 
@@ -118,7 +135,24 @@ For detailed documentation, refer to the README.md in each sub-project directory
 | **CAN Bus** | SocketCAN · CAN 2.0 Extended Frame · 1 Mbps |
 | **Core Python Dependencies** | `numpy`, `pyyaml` |
 | **Optional Python Dependencies** | `pinocchio` (`pip install pin`) — FK/IK/Gravity compensation |
+| **Debugger GUI** | `pyqt6`, `pyqtgraph`, `pyvista`, `pyvistaqt` (`pip install -e ".[debugger]"`) |
 | **ROS2 Dependencies** | `ros2_control`, `MoveIt2`, `pick_ik`, `joy`, etc. (install via `scripts/install_deps.sh`) |
+
+#### Debugger GUI Installation
+
+The Debugger provides a PyQt6-based GUI with 3D URDF visualization (PyVista/VTK), joint drag control, and real-time monitoring.
+
+```bash
+# Ubuntu system dependencies (OpenGL / Mesa)
+sudo apt install -y libgl1-mesa-glx libgl1-mesa-dev libxrender1 libxcb-xinerama0
+
+# Install Debugger dependencies
+cd el_a3_sdk
+pip install -e ".[debugger]"
+
+# Launch
+el-a3-debugger
+```
 
 #### CAN Interface Setup
 

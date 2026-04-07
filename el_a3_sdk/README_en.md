@@ -9,6 +9,7 @@
 - [Architecture](#architecture)
 - [Hardware Requirements](#hardware-requirements)
 - [Installation](#installation)
+  - [Debugger GUI](#3-install-debugger-gui-optional)
 - [Quick Start](#quick-start)
 - [Control Loop](#control-loop)
 - [API Reference](#api-reference)
@@ -115,6 +116,33 @@ pip install -e ".[dynamics]"  # with Pinocchio dynamics support
 ```
 
 Dependencies: `numpy`, `pyyaml`. Optional: `pinocchio` (`pip install pin`) for FK/IK/gravity compensation.
+
+### 3. Install Debugger GUI (Optional)
+
+The Debugger provides a PyQt6-based GUI featuring 3D URDF visualization powered by **PyVista** (VTK), interactive joint drag control, and real-time monitoring.
+
+```bash
+# Ubuntu system dependencies (OpenGL / Mesa, required for 3D rendering)
+sudo apt install -y libgl1-mesa-glx libgl1-mesa-dev libxrender1 libxcb-xinerama0
+
+# Install all Debugger Python dependencies
+pip install -e ".[debugger]"
+```
+
+This installs the following packages (and their dependencies):
+
+| Package | Purpose |
+|---------|---------|
+| `pyqt6` | GUI framework |
+| `pyqtgraph` | Real-time data plotting |
+| `pyvista` | 3D mesh rendering / URDF visualization (VTK-based) |
+| `pyvistaqt` | Embeds PyVista renderer in PyQt6 windows |
+
+Once installed, launch with:
+
+```bash
+el-a3-debugger
+```
 
 ---
 
