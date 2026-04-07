@@ -99,6 +99,10 @@ class ELA3Interface:
         kd_smoothing_alpha: float = 0.15,
         pp_velocity: float = 6.0,
         pp_acceleration: float = 15.0,
+        backend: str = "socketcan",
+        serial_port: Optional[str] = None,
+        serial_baudrate: int = 2000000,
+        can_bitrate: int = 1000000,
     ):
         """
         Args:
@@ -132,6 +136,11 @@ class ELA3Interface:
             kd_smoothing_alpha: 自适应 Kd EMA 平滑系数
             pp_velocity: PP 模式最大速度 (rad/s)
             pp_acceleration: PP 模式加速度 (rad/s²)
+            backend: CAN 驱动后端 ("socketcan" 或 "slcan")，默认 "socketcan"
+            serial_port: SLCAN 串口名（如 "COM3"），backend="slcan" 时使用；
+                         为 None 时使用 can_name 作为串口名
+            serial_baudrate: SLCAN 串口通信波特率 (bps)，默认 2000000
+            can_bitrate: CAN 总线波特率 (bps)，默认 1000000
         """
         _sdk_logger = logging.getLogger("el_a3_sdk")
         _sdk_logger.setLevel(int(logger_level))
@@ -141,11 +150,22 @@ class ELA3Interface:
             _sdk_logger.addHandler(_handler)
 
         self._can_name = can_name
-        self._driver = RobstrideCanDriver(
-            can_name=can_name,
-            host_can_id=host_can_id,
-            motor_type_map=motor_type_map,
-        )
+        if backend == "slcan":
+            from el_a3_sdk.slcan_can_driver import SlcanCanDriver
+            port = serial_port or can_name
+            self._driver = SlcanCanDriver(
+                serial_port=port,
+                host_can_id=host_can_id,
+                motor_type_map=motor_type_map,
+                serial_baudrate=serial_baudrate,
+                can_bitrate=can_bitrate,
+            )
+        else:
+            self._driver = RobstrideCanDriver(
+                can_name=can_name,
+                host_can_id=host_can_id,
+                motor_type_map=motor_type_map,
+            )
         self._joint_directions = joint_directions or dict(DEFAULT_JOINT_DIRECTIONS)
         self._joint_offsets = joint_offsets or dict(DEFAULT_JOINT_OFFSETS)
         self._joint_limits = joint_limits or dict(DEFAULT_JOINT_LIMITS)

@@ -13,6 +13,8 @@ setup(
     ],
     extras_require={
         "dynamics": ["pin"],
+        "slcan": ["pyserial>=3.5"],
+        "windows": ["pyserial>=3.5"],
         "debugger": [
             "pyqt6",
             "pyqtgraph",
@@ -28,5 +30,6 @@ setup(
     classifiers=[
         "Programming Language :: Python :: 3",
         "Operating System :: POSIX :: Linux",
+        "Operating System :: Microsoft :: Windows",
     ],
 )

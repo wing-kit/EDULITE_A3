@@ -1,4 +1,4 @@
-"""CAN 接口检测与系统级操作（开启/关闭/状态查询）"""
+"""CAN 接口检测与系统级操作（开启/关闭/状态查询）+ 串口检测"""
 
 import subprocess
 import logging
@@ -124,3 +124,20 @@ def _run_privileged(cmd: List[str]) -> Tuple[bool, str]:
             return False, str(e)
 
     return False, "需要 root 权限：sudo 和 pkexec 均不可用"
+
+
+def detect_serial_ports() -> List[Dict]:
+    """
+    扫描系统可用串口（用于 SLCAN 模式）。
+    返回 [{"port": "COM3", "desc": "USB-CAN Adapter"}, ...]
+    需要 pyserial，未安装时返回空列表。
+    """
+    try:
+        from serial.tools.list_ports import comports
+        return [{"port": p.device, "desc": p.description} for p in comports()]
+    except ImportError:
+        logger.debug("pyserial 未安装，无法扫描串口")
+        return []
+    except Exception as e:
+        logger.warning("扫描串口失败: %s", e)
+        return []
