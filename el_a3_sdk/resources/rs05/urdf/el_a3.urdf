@@ -633,11 +633,11 @@
       <!-- 零力矩模式阻尼系数 -->
       <!-- Pinocchio 动力学模型配置 -->
       <!-- 注意：需要设置 URDF 文件的绝对路径 -->
-      <param name="urdf_path">/home/wy/RS/A3/el_a3_description/urdf/el_a3.urdf</param>
+      <param name="urdf_path">urdf/el_a3.urdf</param>
       <param name="use_pinocchio_gravity">true</param>
       <!-- 启用完整动力学重力补偿 -->
       <!-- 惯性参数配置文件路径（通过 inertia_calibration.py 标定生成） -->
-      <param name="inertia_config_path">/home/wy/RS/A3/el_a3_description/config/inertia_params.yaml</param>
+      <param name="inertia_config_path">config/inertia_params.yaml</param>
       <!-- 惯性参数缩放因子（旧方式，保留向后兼容） -->
       <param name="inertia_scale_L1_mass">1.0000</param>
       <param name="inertia_scale_L2_mass">2.0000</param>
