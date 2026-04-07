@@ -105,6 +105,8 @@ class UrdfModel:
         self.materials: Dict[str, np.ndarray] = {}
         self._kinematic_chain: List[Tuple[UrdfJoint, str]] = []
 
+        self._child_to_joint: Dict[str, UrdfJoint] = {}
+
         self._parse()
         self._build_chain()
 
@@ -200,6 +202,7 @@ class UrdfModel:
                 chain.append((j, j.child_link))
                 queue.append(j.child_link)
         self._kinematic_chain = chain
+        self._child_to_joint = {j.child_link: j for j in self.joints}
 
     def compute_link_transforms(self, joint_angles: Dict[str, float]) -> Dict[str, np.ndarray]:
         """
@@ -226,6 +229,25 @@ class UrdfModel:
             transforms[child_link] = child_T
 
         return transforms
+
+    def get_link_parent_joint(self, link_name: str) -> Optional[UrdfJoint]:
+        """查找 link 的直接父关节（即 child_link == link_name 的 joint）"""
+        return self._child_to_joint.get(link_name)
+
+    def find_ancestor_revolute_joint(self, link_name: str) -> Optional[UrdfJoint]:
+        """向上遍历运动链，找到第一个 revolute 关节（跳过 fixed）。
+        对应 robot_viewer 的 findParentJoint 逻辑。"""
+        visited = set()
+        current = link_name
+        while current and current not in visited:
+            visited.add(current)
+            joint = self._child_to_joint.get(current)
+            if joint is None:
+                return None
+            if joint.joint_type == "revolute":
+                return joint
+            current = joint.parent_link
+        return None
 
     def resolve_mesh_path(self, mesh_filename: str) -> Optional[Path]:
         """将 package://... 路径解析为实际文件路径"""
