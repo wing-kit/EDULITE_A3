@@ -87,6 +87,7 @@ class ELA3Interface:
         max_acceleration: float = 15.0,
         velocity_limit: float = 10.0,
         gravity_feedforward_ratio: float = 1.0,
+        gravity_joint_scale: Optional[Dict[int, float]] = None,
         limit_margin: float = 0.15,
         limit_stop_margin: float = 0.02,
         limit_decel_factor: float = 0.3,
@@ -195,6 +196,7 @@ class ELA3Interface:
         self._max_acceleration = max_acceleration
         self._velocity_limit = velocity_limit
         self._gravity_feedforward_ratio = clamp(gravity_feedforward_ratio, 0.0, 1.0)
+        self._gravity_joint_scale: Dict[int, float] = gravity_joint_scale or {}
 
         # 关节限位保护
         self._limit_margin = limit_margin
@@ -450,6 +452,7 @@ class ELA3Interface:
             target_velocities = list(self._target_velocities)
 
         # --- Per-joint processing ---
+        clamped_positions = list(target_positions)
         for i in range(self.NUM_ARM_JOINTS):
             mid = i + 1
             direction = self._joint_directions.get(mid, 1.0)
@@ -462,6 +465,7 @@ class ELA3Interface:
                     lo_stop = limits[0] + self._limit_stop_margin
                     hi_stop = limits[1] - self._limit_stop_margin
                     pos = clamp(pos, lo_stop, hi_stop)
+            clamped_positions[i] = pos
 
             motor_pos = pos * direction + offset
 
@@ -477,7 +481,7 @@ class ELA3Interface:
                 else:
                     motor_kd = clamp(self._zero_torque_kd, 0.0, 5.0)
 
-                grav_torque = gravity_torques[i] * direction if gravity_torques else 0.0
+                grav_torque = gravity_torques[i] * direction * self._gravity_joint_scale.get(mid, 1.0) if gravity_torques else 0.0
                 self._driver.send_motion_control(
                     mid, current_motor_pos, 0.0, motor_kp, motor_kd, grav_torque)
             else:
@@ -497,13 +501,13 @@ class ELA3Interface:
                 if abs(vel_ff) < 0.01:
                     motor_kd = min(motor_kd * 1.25, 5.0)
 
-                grav_torque = gravity_torques[i] * direction * self._gravity_feedforward_ratio if gravity_torques else 0.0
+                grav_torque = gravity_torques[i] * direction * self._gravity_feedforward_ratio * self._gravity_joint_scale.get(mid, 1.0) if gravity_torques else 0.0
                 self._driver.send_motion_control(
                     mid, motor_pos, motor_vel, motor_kp, motor_kd, grav_torque)
 
             _busy_wait_us(150)
 
-        self._last_cmd_positions = list(target_positions)
+        self._last_cmd_positions = list(clamped_positions)
 
         # --- Gripper ---
         if gripper_dirty and not zero_torque:

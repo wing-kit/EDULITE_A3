@@ -74,6 +74,9 @@ class ELA3Kinematics:
         self._joint_directions = joint_directions or dict(DEFAULT_JOINT_DIRECTIONS)
 
         self._model: pin.Model = pin.buildModelFromUrdf(self._urdf_path)
+        grav = self._model.gravity
+        grav.linear = np.array([0.0, 0.0, -9.81])
+        self._model.gravity = grav
         self._data: pin.Data = pin.Data(self._model)
 
         self._ee_frame_id = self._model.getFrameId(ee_frame_name)
