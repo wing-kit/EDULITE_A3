@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 def _get_base_path() -> Path:
-    """PyInstaller frozen 环境返回 _MEIPASS，否则返回源码 SDK 根目录"""
+    """PyInstaller frozen 环境返回 _MEIPASS, 否则返回源码 SDK 根目录"""
     if getattr(sys, "frozen", False):
         return Path(sys._MEIPASS)
     return Path(__file__).parent.parent
