@@ -12,9 +12,9 @@ from queue import Queue, Empty
 
 from PyQt6.QtCore import QThread, pyqtSignal
 
-from debugger.backend.data_buffer import DataBuffer
+from MotorStudio.backend.data_buffer import DataBuffer
 
-logger = logging.getLogger("debugger.worker")
+logger = logging.getLogger("MotorStudio.worker")
 
 # Sentinel for typing
 try:
@@ -176,7 +176,7 @@ class ArmWorker(QThread):
             return
 
         if backend != "slcan":
-            from debugger.utils.can_utils import get_can_state
+            from MotorStudio.utils.can_utils import get_can_state
             state = get_can_state(can_name)
             if state != "UP":
                 self.error_occurred.emit(

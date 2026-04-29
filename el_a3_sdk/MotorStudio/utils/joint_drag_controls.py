@@ -7,7 +7,7 @@
 import numpy as np
 from typing import Dict, Optional, Tuple
 
-from debugger.utils.urdf_loader import UrdfModel, UrdfJoint, _make_transform
+from MotorStudio.utils.urdf_loader import UrdfModel, UrdfJoint, _make_transform
 
 
 class JointDragController:

@@ -3,9 +3,9 @@
 from PyQt6.QtWidgets import QMainWindow
 from PyQt6.QtCore import Qt
 
-from debugger.utils.i18n import tr
-from debugger.widgets.monitoring_panel import MonitoringPanel
-from debugger.backend.data_buffer import DataBuffer
+from MotorStudio.utils.i18n import tr
+from MotorStudio.widgets.monitoring_panel import MonitoringPanel
+from MotorStudio.backend.data_buffer import DataBuffer
 
 
 class MonitoringWindow(QMainWindow):

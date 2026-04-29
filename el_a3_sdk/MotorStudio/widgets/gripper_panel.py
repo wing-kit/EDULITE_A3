@@ -7,9 +7,9 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import pyqtSignal, Qt
 
-from debugger.utils.i18n import tr
-from debugger.utils.theme_manager import ThemeManager
-from debugger.utils.style import SCENE_COLORS
+from MotorStudio.utils.i18n import tr
+from MotorStudio.utils.theme_manager import ThemeManager
+from MotorStudio.utils.style import SCENE_COLORS
 
 
 class GripperPanel(QWidget):

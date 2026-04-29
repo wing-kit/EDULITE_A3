@@ -15,7 +15,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QEvent, pyqtSignal
 from PyQt6.QtGui import QCursor
 
-logger = logging.getLogger("debugger.viewer3d")
+logger = logging.getLogger("MotorStudio.viewer3d")
 
 try:
     import pyvista as pv
@@ -26,11 +26,11 @@ except Exception as _exc:
     HAS_PYVISTA = False
     logger.warning("pyvista / pyvistaqt 不可用，3D 可视化已禁用: %s", _exc)
 
-from debugger.utils.urdf_loader import UrdfModel, _make_transform
-from debugger.utils.joint_drag_controls import JointDragController
-from debugger.utils.i18n import tr
-from debugger.utils.theme_manager import ThemeManager
-from debugger.utils.style import SCENE_COLORS
+from MotorStudio.utils.urdf_loader import UrdfModel, _make_transform
+from MotorStudio.utils.joint_drag_controls import JointDragController
+from MotorStudio.utils.i18n import tr
+from MotorStudio.utils.theme_manager import ThemeManager
+from MotorStudio.utils.style import SCENE_COLORS
 
 def _get_base_path() -> Path:
     if getattr(sys, "frozen", False):

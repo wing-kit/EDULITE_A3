@@ -6,15 +6,15 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import pyqtSignal, Qt
 
-from debugger.utils.style import SCENE_COLORS
+from MotorStudio.utils.style import SCENE_COLORS
 
-from debugger.utils.can_utils import (
+from MotorStudio.utils.can_utils import (
     detect_can_interfaces, get_can_state, get_can_bitrate,
     setup_can_interface, shutdown_can_interface,
     detect_serial_ports,
 )
-from debugger.utils.i18n import tr
-from debugger.utils.theme_manager import ThemeManager
+from MotorStudio.utils.i18n import tr
+from MotorStudio.utils.theme_manager import ThemeManager
 
 BITRATE_OPTIONS = [
     ("1M", 1000000),

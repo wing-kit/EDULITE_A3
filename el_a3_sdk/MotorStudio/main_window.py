@@ -8,20 +8,20 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, QTimer
 
-from debugger.backend.arm_worker import ArmWorker
-from debugger.widgets.toolbar_panel import ToolbarPanel
-from debugger.widgets.joint_control_panel import JointControlPanel
-from debugger.widgets.monitoring_window import MonitoringWindow
-from debugger.widgets.trajectory_panel import TrajectoryPanel
-from debugger.widgets.teaching_panel import TeachingPanel
-from debugger.widgets.diagnostics_panel import DiagnosticsPanel
-from debugger.widgets.gripper_panel import GripperPanel
-from debugger.widgets.gamepad_panel import GamepadPanel
-from debugger.widgets.viewer_3d import Viewer3DPanel
-from debugger.utils.i18n import tr
-from debugger.utils.theme_manager import ThemeManager
+from MotorStudio.backend.arm_worker import ArmWorker
+from MotorStudio.widgets.toolbar_panel import ToolbarPanel
+from MotorStudio.widgets.joint_control_panel import JointControlPanel
+from MotorStudio.widgets.monitoring_window import MonitoringWindow
+from MotorStudio.widgets.trajectory_panel import TrajectoryPanel
+from MotorStudio.widgets.teaching_panel import TeachingPanel
+from MotorStudio.widgets.diagnostics_panel import DiagnosticsPanel
+from MotorStudio.widgets.gripper_panel import GripperPanel
+from MotorStudio.widgets.gamepad_panel import GamepadPanel
+from MotorStudio.widgets.viewer_3d import Viewer3DPanel
+from MotorStudio.utils.i18n import tr
+from MotorStudio.utils.theme_manager import ThemeManager
 
-logger = logging.getLogger("debugger")
+logger = logging.getLogger("MotorStudio")
 
 
 class MainWindow(QMainWindow):

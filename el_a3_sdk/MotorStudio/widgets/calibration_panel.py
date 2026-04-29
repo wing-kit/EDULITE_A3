@@ -13,13 +13,13 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import pyqtSignal, Qt
 
-from debugger.backend.calibration_worker import (
+from MotorStudio.backend.calibration_worker import (
     CalibrationWorker, CalibrationConfig,
     has_saved_calibration_data, clear_saved_calibration_data,
 )
-from debugger.utils.i18n import tr
-from debugger.utils.theme_manager import ThemeManager
-from debugger.utils.style import SCENE_COLORS
+from MotorStudio.utils.i18n import tr
+from MotorStudio.utils.theme_manager import ThemeManager
+from MotorStudio.utils.style import SCENE_COLORS
 
 LINK_NAMES = ["L2", "L3", "L4", "L5", "L6"]
 

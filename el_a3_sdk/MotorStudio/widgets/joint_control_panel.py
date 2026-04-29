@@ -8,9 +8,9 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import pyqtSignal, Qt
 
-from debugger.utils.style import JOINT_COLORS, SCENE_COLORS
-from debugger.utils.theme_manager import ThemeManager
-from debugger.utils.i18n import tr
+from MotorStudio.utils.style import JOINT_COLORS, SCENE_COLORS
+from MotorStudio.utils.theme_manager import ThemeManager
+from MotorStudio.utils.i18n import tr
 
 JOINT_LIMITS_DEG = {
     1: (-160.0, 160.0),

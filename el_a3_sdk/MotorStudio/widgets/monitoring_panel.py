@@ -8,10 +8,10 @@ from PyQt6.QtCore import QTimer
 
 import pyqtgraph as pg
 
-from debugger.utils.i18n import tr
-from debugger.utils.theme_manager import ThemeManager
-from debugger.utils.style import SCENE_COLORS, JOINT_COLORS
-from debugger.backend.data_buffer import DataBuffer
+from MotorStudio.utils.i18n import tr
+from MotorStudio.utils.theme_manager import ThemeManager
+from MotorStudio.utils.style import SCENE_COLORS, JOINT_COLORS
+from MotorStudio.backend.data_buffer import DataBuffer
 
 pg.setConfigOptions(antialias=True)
 

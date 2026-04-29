@@ -12,16 +12,16 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import pyqtSignal, QTimer, Qt
 
-from debugger.utils.i18n import tr
-from debugger.utils.theme_manager import ThemeManager
-from debugger.utils.style import SCENE_COLORS
+from MotorStudio.utils.i18n import tr
+from MotorStudio.utils.theme_manager import ThemeManager
+from MotorStudio.utils.style import SCENE_COLORS
 
 from el_a3_sdk.joystick import LinuxJoystick
 from el_a3_sdk.controller_profiles import (
     PROFILES, detect_controller, ControllerDetection,
 )
 
-logger = logging.getLogger("debugger.gamepad")
+logger = logging.getLogger("MotorStudio.gamepad")
 
 
 class _AxisBar(QProgressBar):

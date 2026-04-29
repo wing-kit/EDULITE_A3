@@ -33,7 +33,7 @@ def main():
     else:
         default_meshes = str(REPO_ROOT / "el_a3_ros" / "el_a3_description" / "meshes")
 
-    parser = argparse.ArgumentParser(description="EL-A3 Robot Arm Debugger")
+    parser = argparse.ArgumentParser(description="EL-A3 Robot Arm MotorStudio")
     parser.add_argument("--can", default="can0", help="CAN interface name (default: can0)")
     parser.add_argument("--sim", action="store_true", help="Simulation mode (no hardware)")
     parser.add_argument(
@@ -62,16 +62,16 @@ def main():
     from PyQt6.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
-    app.setApplicationName("EL-A3 Debugger")
+    app.setApplicationName("EL-A3 MotorStudio")
 
-    from debugger.utils.theme_manager import ThemeManager
-    from debugger.utils.style import THEMES
+    from MotorStudio.utils.theme_manager import ThemeManager
+    from MotorStudio.utils.style import THEMES
 
     tm = ThemeManager.instance()
     app.setStyleSheet(THEMES[tm.theme])
     tm.theme_changed.connect(lambda t: app.setStyleSheet(THEMES[t]))
 
-    from debugger.main_window import MainWindow
+    from MotorStudio.main_window import MainWindow
     window = MainWindow(
         urdf_path=args.urdf,
         mesh_dir=args.meshes,

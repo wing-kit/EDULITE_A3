@@ -1,11 +1,11 @@
 """轻量级中英文国际化"""
 
 from __future__ import annotations
-from debugger.utils.theme_manager import ThemeManager
+from MotorStudio.utils.theme_manager import ThemeManager
 
 _STRINGS: dict[str, dict[str, str]] = {
     # ── main_window ──
-    "win.title":            {"zh": "EL-A3 机械臂调试上位机",  "en": "EL-A3 Robot Arm Debugger"},
+    "win.title":            {"zh": "EL-A3 机械臂调试上位机",  "en": "EL-A3 Robot Arm MotorStudio"},
     "win.toolbar":          {"zh": "工具栏",                   "en": "Toolbar"},
     "win.viewer":           {"zh": "3D 可视化",                "en": "3D Viewer"},
     "win.panels":           {"zh": "功能面板",                 "en": "Panels"},

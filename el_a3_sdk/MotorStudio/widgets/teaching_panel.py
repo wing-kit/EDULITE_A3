@@ -8,11 +8,11 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import pyqtSignal, QTimer
 
-from debugger.backend.trajectory_recorder import TrajectoryRecorder
-from debugger.widgets.calibration_panel import CalibrationPanel
-from debugger.utils.i18n import tr
-from debugger.utils.theme_manager import ThemeManager
-from debugger.utils.style import SCENE_COLORS
+from MotorStudio.backend.trajectory_recorder import TrajectoryRecorder
+from MotorStudio.widgets.calibration_panel import CalibrationPanel
+from MotorStudio.utils.i18n import tr
+from MotorStudio.utils.theme_manager import ThemeManager
+from MotorStudio.utils.style import SCENE_COLORS
 
 
 class TeachingPanel(QWidget):
