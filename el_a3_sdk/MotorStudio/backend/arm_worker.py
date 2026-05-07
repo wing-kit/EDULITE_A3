@@ -185,13 +185,24 @@ class ArmWorker(QThread):
                 return
 
         try:
-            sdk_root = Path(sys._MEIPASS) if getattr(sys, "frozen", False) else Path(__file__).parent.parent.parent
+            if getattr(sys, "frozen", False):
+                sdk_root = Path(sys._MEIPASS)
+            else:
+                try:
+                    import el_a3_sdk as _el_a3_sdk_pkg
+                    sdk_root = Path(_el_a3_sdk_pkg.__file__).resolve().parent.parent
+                except Exception:
+                    sdk_root = Path(__file__).resolve().parent.parent.parent
             inertia_path = sdk_root / "resources" / "config" / "inertia_params.yaml"
+            legacy_urdf_path = sdk_root / "resources" / "urdf" / "el_a3_legacy.urdf"
             kwargs = dict(can_name=can_name)
             if inertia_path.exists():
                 kwargs["inertia_config_path"] = str(inertia_path)
+            if legacy_urdf_path.exists():
+                kwargs["urdf_path"] = str(legacy_urdf_path)
             kwargs["per_joint_kd_min"] = {4: 0.005, 5: 0.005, 6: 0.005, 7: 0.02}
             kwargs["per_joint_kd_max"] = {4: 0.10, 5: 0.05, 6: 0.05, 7: 0.10}
+            kwargs["gravity_joint_scale"] = {4: 2.0}
             if backend == "slcan":
                 kwargs["backend"] = "slcan"
                 kwargs["serial_port"] = serial_port or can_name
@@ -339,7 +350,7 @@ class ArmWorker(QThread):
             self.arm.cancel_motion()
             self.log_message.emit("运动已取消")
 
-    _ZERO_TORQUE_KD = [0.05, 0.05, 0.05, 0.0125, 0.0125, 0.0125, 0.05]
+    _ZERO_TORQUE_KD = [0.05, 0.05, 0.05, 0.05, 0.0125, 0.0125, 0.05]
 
     def _do_zero_torque(self, enable):
         if self._sim_mode:

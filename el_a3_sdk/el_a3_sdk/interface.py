@@ -1000,7 +1000,7 @@ class ELA3Interface:
             for i in range(min(len(q), self.NUM_ARM_JOINTS)):
                 smoothed[i] = alpha * q[i] + (1.0 - alpha) * smoothed[i]
             arm_grav = kin.compute_gravity(smoothed[:self.NUM_ARM_JOINTS]) if kin else [0.0] * self.NUM_ARM_JOINTS
-            grav = list(arm_grav) + [0.0] * (self.NUM_JOINTS - len(arm_grav))
+            grav = list[float](arm_grav) + [0.0] * (self.NUM_JOINTS - len(arm_grav))
 
             for i, mid in enumerate(range(1, self.NUM_JOINTS + 1)):
                 fb = self._driver.get_feedback(mid)
