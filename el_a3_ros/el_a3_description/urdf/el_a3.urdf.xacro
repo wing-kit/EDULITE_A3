@@ -5,6 +5,9 @@
 
   <!-- Arguments -->
   <xacro:arg name="use_mock_hardware" default="false"/>
+  <xacro:arg name="use_gazebo" default="false"/>
+  <xacro:arg name="gazebo_ros2_control_params" default=""/>
+  <xacro:arg name="mesh_prefix" default="package://el_a3_description/meshes/"/>
   <xacro:arg name="can_interface" default="can0"/>
   <xacro:arg name="host_can_id" default="253"/>
   <xacro:arg name="wrist_motor_type" default="EL05"/>
@@ -12,6 +15,7 @@
   <!-- Wrist motor parameters (EL05: 6Nm, RS05: 5.5Nm) -->
   <xacro:property name="wrist_motor_type" value="$(arg wrist_motor_type)"/>
   <xacro:property name="wrist_effort" value="${5.5 if wrist_motor_type == 'RS05' else 6.0}"/>
+  <xacro:property name="mesh_prefix" value="$(arg mesh_prefix)"/>
   
   <!-- Include ros2_control -->
   <xacro:include filename="$(find el_a3_description)/urdf/el_a3_ros2_control.xacro"/>
@@ -44,14 +48,14 @@
     <visual>
       <origin xyz="-0.000643355 0 0.059" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="package://el_a3_description/meshes/l1.stl"/>
+        <mesh filename="${mesh_prefix}l1.stl"/>
       </geometry>
       <material name="dark_brown"/>
     </visual>
     <collision>
       <origin xyz="-0.000643355 0 0.059" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="package://el_a3_description/meshes/l1.stl"/>
+        <mesh filename="${mesh_prefix}l1.stl"/>
       </geometry>
     </collision>
   </link>
@@ -67,14 +71,14 @@
     <visual>
       <origin xyz="-0.000642857 0 0.001" rpy="3.14159 0 0"/>
       <geometry>
-        <mesh filename="package://el_a3_description/meshes/l2.stl"/>
+        <mesh filename="${mesh_prefix}l2.stl"/>
       </geometry>
       <material name="orange"/>
     </visual>
     <collision>
       <origin xyz="-0.000642857 0 0.001" rpy="3.14159 0 0"/>
       <geometry>
-        <mesh filename="package://el_a3_description/meshes/l2.stl"/>
+        <mesh filename="${mesh_prefix}l2.stl"/>
       </geometry>
     </collision>
   </link>
@@ -90,14 +94,14 @@
     <visual>
       <origin xyz="0.009 -0.07 0" rpy="-1.5708 0 0"/>
       <geometry>
-        <mesh filename="package://el_a3_description/meshes/l3.stl"/>
+        <mesh filename="${mesh_prefix}l3.stl"/>
       </geometry>
       <material name="dark_brown"/>
     </visual>
     <collision>
       <origin xyz="0.009 -0.07 0" rpy="-1.5708 0 0"/>
       <geometry>
-        <mesh filename="package://el_a3_description/meshes/l3.stl"/>
+        <mesh filename="${mesh_prefix}l3.stl"/>
       </geometry>
     </collision>
   </link>
@@ -113,14 +117,14 @@
     <visual>
       <origin xyz="-0.181 -0.07 0" rpy="-1.5708 0 0"/>
       <geometry>
-        <mesh filename="package://el_a3_description/meshes/l4.stl"/>
+        <mesh filename="${mesh_prefix}l4.stl"/>
       </geometry>
       <material name="orange"/>
     </visual>
     <collision>
       <origin xyz="-0.181 -0.07 0" rpy="-1.5708 0 0"/>
       <geometry>
-        <mesh filename="package://el_a3_description/meshes/l4.stl"/>
+        <mesh filename="${mesh_prefix}l4.stl"/>
       </geometry>
     </collision>
   </link>
@@ -136,14 +140,14 @@
     <visual>
       <origin xyz="0.004 0.134 0" rpy="1.5708 0 0"/>
       <geometry>
-        <mesh filename="package://el_a3_description/meshes/l5.stl"/>
+        <mesh filename="${mesh_prefix}l5.stl"/>
       </geometry>
       <material name="dark_brown"/>
     </visual>
     <collision>
       <origin xyz="0.004 0.134 0" rpy="1.5708 0 0"/>
       <geometry>
-        <mesh filename="package://el_a3_description/meshes/l5.stl"/>
+        <mesh filename="${mesh_prefix}l5.stl"/>
       </geometry>
     </collision>
   </link>
@@ -159,14 +163,14 @@
     <visual>
       <origin xyz="0.0532 0 0.173" rpy="3.14159 0 0"/>
       <geometry>
-        <mesh filename="package://el_a3_description/meshes/l6.stl"/>
+        <mesh filename="${mesh_prefix}l6.stl"/>
       </geometry>
       <material name="orange"/>
     </visual>
     <collision>
       <origin xyz="0.0532 0 0.173" rpy="3.14159 0 0"/>
       <geometry>
-        <mesh filename="package://el_a3_description/meshes/l6.stl"/>
+        <mesh filename="${mesh_prefix}l6.stl"/>
       </geometry>
     </collision>
   </link>
@@ -183,28 +187,28 @@
     <visual>
       <origin xyz="0 0 -0.0755" rpy="3.14159 0 0"/>
       <geometry>
-        <mesh filename="package://el_a3_description/meshes/el05_l6.stl"/>
+        <mesh filename="${mesh_prefix}el05_l6.stl"/>
       </geometry>
       <material name="dark_brown"/>
     </visual>
     <collision>
       <origin xyz="0 0 -0.0755" rpy="3.14159 0 0"/>
       <geometry>
-        <mesh filename="package://el_a3_description/meshes/el05_l6.stl"/>
+        <mesh filename="${mesh_prefix}el05_l6.stl"/>
       </geometry>
     </collision>
     <!-- Part jaw -->
     <visual>
       <origin xyz="0 0 -0.0755" rpy="3.14159 0 0"/>
       <geometry>
-        <mesh filename="package://el_a3_description/meshes/jaw.stl"/>
+        <mesh filename="${mesh_prefix}jaw.stl"/>
       </geometry>
       <material name="orange"/>
     </visual>
     <collision>
       <origin xyz="0 0 -0.0755" rpy="3.14159 0 0"/>
       <geometry>
-        <mesh filename="package://el_a3_description/meshes/jaw.stl"/>
+        <mesh filename="${mesh_prefix}jaw.stl"/>
       </geometry>
     </collision>
   </link>
@@ -301,8 +305,17 @@
   <!-- ros2_control interface -->
   <xacro:el_a3_ros2_control 
     use_mock_hardware="$(arg use_mock_hardware)"
+    use_gazebo="$(arg use_gazebo)"
     can_interface="$(arg can_interface)"
     host_can_id="$(arg host_can_id)"
     wrist_motor_type="$(arg wrist_motor_type)"/>
+
+  <xacro:if value="$(arg use_gazebo)">
+    <gazebo>
+      <plugin name="gazebo_ros2_control" filename="libgazebo_ros2_control.so">
+        <parameters>$(arg gazebo_ros2_control_params)</parameters>
+      </plugin>
+    </gazebo>
+  </xacro:if>
 
 </robot>
